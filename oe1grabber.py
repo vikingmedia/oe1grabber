@@ -136,7 +136,7 @@ USAGE
         parser = ArgumentParser(description=program_license, formatter_class=RawDescriptionHelpFormatter)
         parser.add_argument("-t", "--target", default=os.path.dirname(os.path.realpath(__file__)), help="target directory")
         parser.add_argument("-d", "--date", default=None, help="date to grab (format: YYYYMMDD)")
-        parser.add_argument("-a", "--all", default=None, help="grab all available dates")
+        parser.add_argument("-a", "--all", action='store_true', default=None, help="grab all available dates")
         parser.add_argument("-v", "--verbose", dest="verbose", action="count", help="set verbosity level [default: %(default)s]")
         parser.add_argument('-V', '--version', action='version', version=program_version_message)
         
