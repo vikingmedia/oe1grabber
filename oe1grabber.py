@@ -1,4 +1,4 @@
-#!python
+#!/usr/bin/python
 # encoding: utf-8
 '''
 oe1grabber -- shortdesc
@@ -37,19 +37,19 @@ __date__ = '2014-01-06'
 __updated__ = '2014-01-06'
 
 
-DEBUG = 1
+DEBUG = 0
 TESTRUN = 0
 PROFILE = 0
 
 
 OE1_MEDIATHEK_BASE_URL = 'http://oe1.orf.at/programm/konsole/tag/'
-DIR = os.path.dirname(os.path.realpath(__file__))
 
 
 
-def grab(self, date, verbose=True):
+def grab(date, target, verbose=True):
     while 1:
         try: 
+            if verbose: print OE1_MEDIATHEK_BASE_URL + date
             j = json.loads(urllib2.urlopen(OE1_MEDIATHEK_BASE_URL + date).read())
             break
             
@@ -65,9 +65,11 @@ def grab(self, date, verbose=True):
             d, m, y = [i.rjust(2, '0') for i in p['day_label'].split('.')]
             title = (y+m+d + ' ' + p['time'].replace(':', '') + ' - ' + p['title']).encode('utf-8', 'ignore')
     
-            local_dir = os.path.join(DIR, date)
+            local_dir = os.path.join(target, date)
+            if verbose: print local_dir
             if not os.path.isdir(local_dir): os.mkdir(local_dir)
             path = os.path.join(local_dir, repl.sub('', title)+'.mp3')
+            if verbose: print path
             
             if os.path.exists(path): continue
     
@@ -100,7 +102,6 @@ def grab(self, date, verbose=True):
             if p.values()[0] == None:
                 print 'terminating "%s"' % (p.values()[0], )
                 p.values()[0].terminate()            
-    
 
 
 def main(argv=None): 
@@ -133,15 +134,16 @@ USAGE
     try:
         # Setup argument parser
         parser = ArgumentParser(description=program_license, formatter_class=RawDescriptionHelpFormatter)
-        parser.add_argument("-d", "--date", help="date to grab (format: YYYYMMDD)")
-        parser.add_argument("-a", "--all", help="grab all available dates")
+        parser.add_argument("-t", "--target", default=os.path.dirname(os.path.realpath(__file__)), help="target directory")
+        parser.add_argument("-d", "--date", default=None, help="date to grab (format: YYYYMMDD)")
+        parser.add_argument("-a", "--all", default=None, help="grab all available dates")
         parser.add_argument("-v", "--verbose", dest="verbose", action="count", help="set verbosity level [default: %(default)s]")
         parser.add_argument('-V', '--version', action='version', version=program_version_message)
         
         # Process arguments
         args = parser.parse_args()
         verbose = args.verbose
-        
+
         if verbose > 0:
             print("Verbose mode on")
         
@@ -153,7 +155,7 @@ USAGE
         elif args.date: dates = [args.date]
         
         for d in dates:
-            grab(verbose=verbose, date=d)
+            grab(date=d, target=args.target, verbose=verbose)
         
         return 0
     
