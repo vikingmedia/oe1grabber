@@ -63,7 +63,7 @@ def grab(date, target, verbose=True):
         proc = []
         for p in j['list']:
             d, m, y = [i.rjust(2, '0') for i in p['day_label'].split('.')]
-            title = (y+m+d + ' ' + p['time'].replace(':', '') + ' - ' + p['title']).encode('utf-8', 'ignore')
+            title = (y+m+d + ' ' + p['time'].replace(':', '') + ' - ' + p['title']).replace('/').encode('utf-8', 'ignore')
     
             local_dir = os.path.join(target, date)
             if verbose: print local_dir
