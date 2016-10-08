@@ -1,9 +1,9 @@
 #!/usr/bin/python
 # encoding: utf-8
 '''
-oe1grabber -- shortdesc
+zeitgrabber -- shortdesc
 
-oe1grabber is a description
+zeitgrabber is a description
 
 It defines classes_and_methods
 
@@ -20,16 +20,15 @@ It defines classes_and_methods
 import sys
 import os
 import urllib2
-import json
-import subprocess
-import time
-import re
-from datetime import date
-from datetime import timedelta
+import BeautifulSoup
+import dateutil.parser
 
 from argparse import ArgumentParser
 from argparse import RawDescriptionHelpFormatter
 
+#########################################################################################################
+# CONSTANTS
+#########################################################################################################
 
 __all__ = []
 __version__ = 0.1
@@ -41,67 +40,9 @@ DEBUG = 0
 TESTRUN = 0
 PROFILE = 0
 
-
-OE1_MEDIATHEK_BASE_URL = 'http://oe1.orf.at/programm/konsole/tag/'
-
-
-
-def grab(date, target, verbose=True):
-    while 1:
-        try: 
-            if verbose: print OE1_MEDIATHEK_BASE_URL + date
-            j = json.loads(urllib2.urlopen(OE1_MEDIATHEK_BASE_URL + date).read())
-            break
-            
-        except: 
-            print 'error downloading list, waiting for 10s ...'
-            time.sleep(10)
-            
-    repl = re.compile('\?') #replace that characters in the file name
-    
-    try:
-        proc = []
-        for p in j['list']:
-            d, m, y = [i.rjust(2, '0') for i in p['day_label'].split('.')]
-            title = (y+m+d + ' ' + p['time'].replace(':', '') + ' - ' + p['title']).replace('/','-').encode('utf-8', 'ignore')
-    
-            local_dir = os.path.join(target, date)
-            if verbose: print local_dir
-            if not os.path.isdir(local_dir): os.mkdir(local_dir)
-            path = os.path.join(local_dir, repl.sub('', title)+'.mp3')
-            if verbose: print path
-            
-            if os.path.exists(path): continue
-    
-            cli = [
-                 '/usr/bin/ffmpeg',
-                 '-i', p['url_stream'] + '&ua=flash&shoutcast=0',
-                 '-metadata', 'title='+title+'',
-                 '-metadata', 'album=7 Tage OE1',
-                 '-metadata', 'year='+p['day_label'][-4:]+'',
-                 '-metadata', 'comment='+p['info'].encode('utf8')+'',
-                 '-acodec','copy',
-                 '-f', 'mp3',
-                 path
-            ]
-    
-            proc.append({path: subprocess.Popen(cli)})
-            
-        while True:
-            proc_status = [p.values()[0].poll() for p in proc]
-                
-            if all([x is not None for x in proc_status]): break
-            time.sleep(1)
-            
-        for p in proc:
-            print p.values()[0], ': ', p.keys()[0] 
-
-          
-    finally:
-        for p in proc:
-            if p.values()[0] == None:
-                print 'terminating "%s"' % (p.values()[0], )
-                p.values()[0].terminate()            
+ZEIT_FEED_URL = 'https://premium.zeit.de/itunes/feed'
+USERNAME = 'efellows1'
+PASSWORD = 'efellows'
 
 
 def main(argv=None): 
@@ -135,7 +76,6 @@ USAGE
         # Setup argument parser
         parser = ArgumentParser(description=program_license, formatter_class=RawDescriptionHelpFormatter)
         parser.add_argument("-t", "--target", default=os.path.dirname(os.path.realpath(__file__)), help="target directory")
-        parser.add_argument("-d", "--date", default='today', help="date to grab (format: YYYYMMDD) or today or yesterday")
         parser.add_argument("-a", "--all", action='store_true', default=None, help="grab all available dates")
         parser.add_argument("-v", "--verbose", dest="verbose", action="count", help="set verbosity level [default: %(default)s]")
         parser.add_argument('-V', '--version', action='version', version=program_version_message)
@@ -146,17 +86,33 @@ USAGE
 
         if verbose > 0:
             print("Verbose mode on")
+            
+        # set up password manager
+        password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
+        top_level_url = "https://premium.zeit.de"
+        password_mgr.add_password(None, top_level_url, USERNAME, PASSWORD)
+        handler = urllib2.HTTPBasicAuthHandler(password_mgr)
+        opener = urllib2.build_opener(handler)
         
-        today = date.today()
-        dt = timedelta(days=1)
-        dates = [today.strftime('%Y%m%d')]
+        #download itunes feed
+        if verbose: print 'Getting feed from %s' % (ZEIT_FEED_URL, )
+        soup = BeautifulSoup.BeautifulStoneSoup(urllib2.urlopen(ZEIT_FEED_URL).read())
         
-        if args.all: dates.extend([d.strftime('%Y%m%d') for d in [today-dt*i for i in range(1, 7)]])
-        elif args.date == 'yesterday': dates = [(today-dt).strftime('%Y%m%d')]
-        elif args.date: dates = [args.date]
-        
-        for d in dates:
-            grab(date=d, target=args.target, verbose=verbose)
+        # iterate through item
+        for item in soup.findAll('item'):
+            clean_title = "".join([c if c.isalnum() else '_' for c in item.title.text]).rstrip()
+            timestamp = dateutil.parser.parse(item.pubdate.text)
+            file_name = timestamp.strftime('%Y%m%d_%H%M') + '_' + clean_title + '.mp3'
+            if verbose: print file_name
+            
+            target_path = os.path.join(args.target, timestamp.strftime('%Y%m%d'))
+            if not os.path.isdir(target_path): os.mkdir(target_path) 
+            
+            file_path = os.path.join(target_path, file_name)
+            if verbose: print '%s --> %s' % (item.enclosure['url'], file_path)
+            
+            with open(file_path, 'wb') as f:
+                f.write(opener.open(item.enclosure['url']).read())
         
         return 0
     
