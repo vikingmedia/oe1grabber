@@ -75,11 +75,11 @@ def grab(date, target, verbose=True):
     
             cli = [
                  '/usr/bin/ffmpeg',
+                 '-i', p['url_stream'] + '&ua=flash&shoutcast=0',
                  '-metadata', 'title='+title+'',
                  '-metadata', 'album=7 Tage OE1',
                  '-metadata', 'year='+p['day_label'][-4:]+'',
                  '-metadata', 'comment='+p['info'].encode('utf8')+'',
-                 '-i', p['url_stream'] + '&ua=flash&shoutcast=0',
                  '-acodec','copy',
                  '-f', 'mp3',
                  path
@@ -135,7 +135,7 @@ USAGE
         # Setup argument parser
         parser = ArgumentParser(description=program_license, formatter_class=RawDescriptionHelpFormatter)
         parser.add_argument("-t", "--target", default=os.path.dirname(os.path.realpath(__file__)), help="target directory")
-        parser.add_argument("-d", "--date", default=None, help="date to grab (format: YYYYMMDD)")
+        parser.add_argument("-d", "--date", default='today', help="date to grab (format: YYYYMMDD) or today or yesterday")
         parser.add_argument("-a", "--all", action='store_true', default=None, help="grab all available dates")
         parser.add_argument("-v", "--verbose", dest="verbose", action="count", help="set verbosity level [default: %(default)s]")
         parser.add_argument('-V', '--version', action='version', version=program_version_message)
@@ -152,6 +152,7 @@ USAGE
         dates = [today.strftime('%Y%m%d')]
         
         if args.all: dates.extend([d.strftime('%Y%m%d') for d in [today-dt*i for i in range(1, 7)]])
+        elif args.date == 'yesterday': dates = [(today-dt).strftime('%Y%m%d')]
         elif args.date: dates = [args.date]
         
         for d in dates:
