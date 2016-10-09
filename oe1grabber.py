@@ -153,6 +153,7 @@ USAGE
         
         if args.all: dates.extend([d.strftime('%Y%m%d') for d in [today-dt*i for i in range(1, 7)]])
         elif args.date == 'yesterday': dates = [(today-dt).strftime('%Y%m%d')]
+        elif args.date == 'today': pass
         elif args.date: dates = [args.date]
         
         for d in dates:
