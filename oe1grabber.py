@@ -80,19 +80,23 @@ if __name__ == '__main__':
 
             if os.path.exists(of): continue
     
-            cli = [
-                 '/usr/bin/ffmpeg',
-                 '-i', 'http://loopstream01.apa.at/?channel=oe1&shoutcast=0&id=%s&offset=0' % (broadcast['streams'][0]['loopStreamId'],),
-                 '-metadata', 'title='+title+'',
-                 '-metadata', 'album=7 Tage OE1',
-                 '-metadata', 'year='+year+'',
-                 '-metadata', 'comment='+description.encode('utf8')+'',
-                 '-acodec','copy',
-                 '-f', 'mp3',
-                 of
-            ]
+            try:
             
-            ffmpeg_processes.append({of: subprocess.Popen(cli)})
+                cli = [
+                     '/usr/bin/ffmpeg',
+                     '-i', 'http://loopstream01.apa.at/?channel=oe1&shoutcast=0&id=%s&offset=0' % (broadcast['streams'][0]['loopStreamId'],),
+                     '-metadata', 'title='+title+'',
+                     '-metadata', 'album=7 Tage OE1',
+                     '-metadata', 'year='+year+'',
+                     '-metadata', 'comment='+description.encode('utf8')+'',
+                     '-acodec','copy',
+                     '-f', 'mp3',
+                     of
+                ]
+                
+                ffmpeg_processes.append({of: subprocess.Popen(cli)})
+                
+            except: pass
         
             
         while True:
